@@ -12,7 +12,9 @@ contract MinimalProxyFactory {
         //address to assign cloned proxy
         address proxy;
         address owner;
-        bytes memory createCode = _createCode(_implementationContract);
+        // bytes memory createCode = _createCode(_implementationContract);
+        bytes memory createCode = getCreationCode(_implementationContract);
+
         assembly {
             owner := mload(add(salt, 20))
             /*
@@ -24,14 +26,26 @@ contract MinimalProxyFactory {
             // code starts at the pointer stored in "clone"
             // code size == 0x37 (55 bytes)
 
-           // proxy := create2(0, add(createCode, 0x20), mload(createCode), salt)
-            proxy := create(0, createCode, 0x37)
+            proxy := create2(callvalue(), add(createCode, 0x20), mload(createCode), salt)
+            // proxy := create(0, createCode, 0x37)
         }
-
 
         ImplementationContract(proxy).initializer(owner);
         proxies.push(proxy);
         return proxy;
+    }
+
+    function getCreationCode(address implementation)
+        public
+        pure
+        returns (bytes memory)
+    {
+        return
+            abi.encodePacked(
+                hex"3d60ad80600a3d3981f3363d3d373d3d3d363d73",
+                implementation,
+                hex"5af43d82803e903d91602b57fd5bf3"
+            );
     }
 
     function _createCode(address _implementationContract)
